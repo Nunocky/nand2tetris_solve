@@ -1,0 +1,97 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    static Array freeList;
+
+    /** Initializes the class. */
+    function void init() {
+      let freeList = 2048;
+      let freeList[0] = 14336;
+      let freeList[1] = null;
+
+      return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+      var Array memory;
+      let memory = address;
+      return memory[0];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+      var Array memory;
+      let memory = address;
+      let memory[0] = value;
+      return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function int alloc(int size) {
+      var Array segment, segment_prev, segment_new;
+
+      let segment_prev = null;
+      let segment      = freeList;
+
+      while ( segment[0] < (size + 1)) {
+         let segment_prev = segment;
+         let segment = segment[1];
+
+         if (segment = 0) {
+           // memory not allocated
+
+           return null;
+         }
+      }
+
+      if (segment[0] = (size + 1) ){
+        // use whole segment
+
+        if (segment_prev = null) {
+           // head segment
+           let freeList = segment[1];
+        }
+        else {
+           let segment_prev[1] = segment[1];
+        }
+      }
+      else {
+        // split segment
+
+        let segment_new = segment + segment[0] - size - 1;
+        let segment_new[0] = size + 1;
+
+        let segment[0] = segment[0] - size - 1;
+
+        let segment = segment_new;
+      }
+
+      return segment + 1;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+
+      var Array segment;
+      var Array p;
+
+      let segment = o - 1;
+
+      let p = freeList;
+      let freeList = segment;
+      let segment[1] = p;
+
+      return;
+    }    
+}

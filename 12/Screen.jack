@@ -1,0 +1,227 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Screen.jack
+
+/**
+ * A library of functions for displaying graphics on the screen.
+ * The Hack physical screen consists of 512 rows (indexed 0..511, top to bottom)
+ * of 256 pixels each (indexed 0..255, left to right). The top left pixel on 
+ * the screen is indexed (0,0).
+ */
+class Screen {
+    static boolean color;
+    static Array twoToThe;
+
+    /** Initializes the Screen. */
+    function void init() {
+      var int i, v;
+
+      let twoToThe = Array.new(16);
+      let i = 0;
+      let v = 1;
+
+      while(i<16) {
+        let twoToThe[i] = v;
+        let v = v + v;
+        let i = i + 1;
+      }
+
+      let color = true;
+      return;
+    }
+
+    /** Erases the entire screen. */
+    function void clearScreen() {
+       var Array memory;
+       var int i;
+
+       let memory = 16384;
+       let i = 8192;
+
+       while (i > 0) {
+         let memory[i] = 0;
+         let i = i - 1;
+       }
+
+       return;
+    }
+
+    /** Sets the current color, to be used for all subsequent drawXXX commands.
+     *  Black is represented by true, white by false. */
+    function void setColor(boolean b) {
+      let color = b;
+      return;
+    }
+
+    /** Draws the (x,y) pixel, using the current color. */
+    function void drawPixel(int x, int y) {
+       var int address;
+       var int n;
+       var int x_div_16, x_mod_16;
+       var int bitmask;
+       var int value;
+
+       if ((x < 0) | (511 < x) ) {
+         do Sys.error(7);
+       }
+
+       if ((y < 0) | (255 < y) ) {
+         do Sys.error(7);
+       }
+
+       let x_div_16 = x / 16;
+       let x_mod_16 = Math.mod(x, 16);
+       let bitmask  = twoToThe[x_mod_16];
+
+       let address = 16384 + (y * 32) + x_div_16;
+
+       let value = Memory.peek(address);
+
+       if (color) {
+         // black  ... set bit
+         do Memory.poke(address, value | bitmask);
+       }
+       else {
+         // white  ... clear bit
+         do Memory.poke(address, value & (~bitmask));
+       }
+
+      return;
+    }
+
+    /** Draws a line from pixel (x1,y1) to pixel (x2,y2), using the current color. */
+    function void drawLine(int x1, int y1, int x2, int y2) {
+      var int dx, dy;
+      var int sx, sy;
+      var int err;
+      var int e2;
+
+      if ((x1 < 0) | (511 < x1) ) {
+        do Sys.error(8);
+      }
+
+      if ((y1 < 0) | (255 < y1) ) {
+        do Sys.error(8);
+      }
+
+      if ((x2 < 0) | (511 < x2) ) {
+        do Sys.error(8);
+      }
+
+      if ((y2 < 0) | (255 < y2) ) {
+        do Sys.error(8);
+      }
+
+      let dx = Math.abs(x2 - x1);
+      let dy = Math.abs(y2 - y1);
+
+      if (x1 < x2) {
+         let sx = 1;
+      }
+      else {
+         let sx = -1;
+      }
+
+      if (y1 < y2) {
+         let sy = 1;
+      }
+      else {
+         let sy = -1;
+      }
+
+      let err = dx - dy;
+
+      while (true) {
+         do Screen.drawPixel(x1, y1);
+         if ( (x1 = x2) & (y1 = y2)) {
+            return;
+         }
+
+         let e2 = 2 * err;
+
+         if (e2 > (-dy)) {
+            let err = err - dy;
+            let x1 = x1 + sx;
+         }
+
+         if (e2 < dx) {
+           let err = err + dx;
+           let y1 = y1 + sy;
+         }
+      }
+
+      return;
+    }
+
+    /** Draws a filled rectangle whose top left corner is (x1, y1)
+     * and bottom right corner is (x2,y2), using the current color. */
+    function void drawRectangle(int x1, int y1, int x2, int y2) {
+
+      if ((x1 < 0) | (511 < x1) ) {
+        do Sys.error(9);
+      }
+
+      if ((y1 < 0) | (255 < y1) ) {
+        do Sys.error(9);
+      }
+
+      if ((x2 < 0) | (511 < x2) ) {
+        do Sys.error(9);
+      }
+
+      if ((y2 < 0) | (255 < y2) ) {
+        do Sys.error(9);
+      }
+
+
+      while (y1 < (y2 + 1)) {
+        do Screen.drawLine(x1, y1, x2, y1);
+        let y1 = y1 + 1;
+      }
+
+      return;
+    }
+
+    /** Draws a filled circle of radius r<=181 around (x,y), using the current color. */
+    function void drawCircle(int x, int y, int r) {
+      var int dy;
+      var int sq;
+      var int rr;
+
+
+      if ((x < 0) | (511 < x) ) {
+        do Sys.error(12);
+      }
+
+      if ((y < 0) | (255 < y) ) {
+        do Sys.error(12);
+      }
+
+      if ((r < 0) | (181 < r) ) {
+        do Sys.error(13);
+      }
+
+      if (((x - r) < 0) | (511 < (x + r)) ) {
+        do Sys.error(13);
+      }
+
+      if (((y - r) < 0) | (255 < (y + r)) ) {
+        do Sys.error(13);
+      }
+
+
+      let rr = r * r;
+
+      let dy = -r;
+      while (dy < (r + 1)) {
+        let sq = Math.sqrt(rr - (dy * dy));
+
+        do Screen.drawLine(x - sq, y + dy, x + sq, y + dy);
+
+        let dy = dy + 1;
+      }
+
+      return;
+    }
+}
